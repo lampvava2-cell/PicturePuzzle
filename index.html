@@ -69,7 +69,9 @@
                 statusText.innerText = "사진 로드 완료. 난이도를 선택 후 퍼즐 시작을 누르세요.";
             }
         }
-        reader.readAsDataURL(e.target.files[0]);
+        if (e.target.files[0]) {
+            reader.readAsDataURL(e.target.files[0]);
+        }
     });
 
     function startPuzzle() {
@@ -92,17 +94,14 @@
             for (let c = 0; c < size; c++) {
                 pieces.push({
                     correctIndex: r * size + c,
-                    currentIndex: r * size + c,
                     bgX: c * pieceSize,
                     bgY: r * pieceSize
                 });
             }
         }
 
-        // 섞기 (정렬되지 않을 때까지 섞기)
-        do {
-            pieces.sort(() => Math.random() - 0.5);
-        } while (isCompleted());
+        // 조각 무작위 섞기
+        pieces.sort(() => Math.random() - 0.5);
 
         renderBoard(size, pieceSize);
         statusText.innerText = "조각을 터치해 위치를 서로 교환하세요.";
@@ -130,6 +129,7 @@
     function handlePieceClick(index, size, pieceSize) {
         if (selectedPieceIndex === null) {
             selectedPieceIndex = index;
+            renderBoard(size, pieceSize);
         } else {
             // 위치 교환 (Swap)
             let temp = pieces[selectedPieceIndex];
@@ -149,7 +149,7 @@
     }
 
     function isCompleted() {
-        return pieces.every((p, i) => p.correctIndex === p.currentIndex || true); // 위치 비교 검증
+        return pieces.every((p, i) => p.correctIndex === i);
     }
 </script>
 

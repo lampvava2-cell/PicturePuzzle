@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>모바일 그림 맞추기 게임</title>
+    <title>모바일 퍼즐 게임 - 옴니포맷 리워드 에디션</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; user-select: none; -webkit-user-select: none; }
         h2 { color: #333; }
@@ -29,17 +29,32 @@
             box-sizing: border-box;
             touch-action: none;
         }
-        .puzzle-piece.dragging { opacity: 0.4; border: 2px dashed #ff4757; }
+        .puzzle-piece.dragging { opacity: 0.3; }
         .puzzle-piece.drag-over { border: 3px solid #2ed573; background-color: rgba(46, 213, 115, 0.3); }
+        
+        #drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.85;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            display: none;
+            border: 2px solid #ff4757;
+            box-sizing: border-box;
+            background-size: 320px 320px;
+        }
+
         #complete-view { display: none; margin-top: 20px; }
         #complete-view img { max-width: 320px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #reward-title { color: #ff4757; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
 
-    <h2>그림 맞추기 퍼즐</h2>
+    <h2>그림 맞추기 퍼즐 (옴니포맷 리워드 에디션)</h2>
     
     <div class="controls">
+        <!-- accept="image/*"를 통해 모든 이미지 포맷(jpg, png, webp, heic 등) 선택 허용 -->
         <input type="file" id="imageLoader" accept="image/*"><br>
         <select id="gridSize">
             <option value="3">3 x 3</option>
@@ -52,9 +67,11 @@
     <p id="status">사진을 업로드하고 시작 버튼을 누르세요.</p>
 
     <div id="puzzle-container"></div>
+    <div id="drag-ghost"></div>
 
     <div id="complete-view">
-        <h3>🎉 퍼즐 완성!</h3>
+        <h3 id="standard-title">🎉 퍼즐 완성! 원본 이미지</h3>
+        <h3 id="reward-title">🎁 히든 보상 이미지 등장!</h3>
         <img id="originalImagePreview" src="" alt="완성 이미지">
     </div>
 
@@ -65,11 +82,21 @@
     let currentSize = 3;
     let currentPieceSize = 106.66;
 
+    // 깃허브에 업로드해둔 보상 이미지 파일들 (어떤 포맷이든 파일명만 맞추면 자동 인식)
+    const rewardImages = [
+        "reward1.jpg",
+        "reward2.png",
+        "reward3.webp"
+    ];
+
     const container = document.getElementById('puzzle-container');
     const statusText = document.getElementById('status');
     const completeView = document.getElementById('complete-view');
+    const dragGhost = document.getElementById('drag-ghost');
+    const standardTitle = document.getElementById('standard-title');
+    const rewardTitle = document.getElementById('reward-title');
+    const previewImg = document.getElementById('originalImagePreview');
 
-    // Web Audio API 사운드 생성 함수
     let audioCtx = null;
     function getAudioContext() {
         if (!audioCtx) {
@@ -81,14 +108,13 @@
         return audioCtx;
     }
 
-    // 조각 이동(스왑) 효과음
     function playMoveSound() {
         try {
             let ctx = getAudioContext();
             let osc = ctx.createOscillator();
             let gain = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(440, ctx.currentTime); // A4
+            osc.frequency.setValueAtTime(440, ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.08);
             gain.gain.setValueAtTime(0.15, ctx.currentTime);
             gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.08);
@@ -99,11 +125,10 @@
         } catch(e) {}
     }
 
-    // 퍼즐 완성 승리 멜로디 효과음
     function playWinSound() {
         try {
             let ctx = getAudioContext();
-            let notes = [523.25, 659.25, 783.99, 1046.50]; // 도, 미, 솔, 높은도
+            let notes = [523.25, 659.25, 783.99, 1046.50];
             notes.forEach((freq, index) => {
                 let osc = ctx.createOscillator();
                 let gain = ctx.createGain();
@@ -111,38 +136,43 @@
                 
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(freq, startTime);
-                
                 gain.gain.setValueAtTime(0.2, startTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
                 
                 osc.connect(gain);
                 gain.connect(ctx.destination);
-                
                 osc.start(startTime);
                 osc.stop(startTime + 0.3);
             });
         } catch(e) {}
     }
 
+    // 파일 로더: 어떤 이미지 포맷이든 브라우저가 지원하는 한 DataURL 형태로 완벽 수용
     document.getElementById('imageLoader').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
 
+        // 이미지 파일인지 MIME 타입 체크 (image/로 시작하는 모든 파일 허용)
+        if (!file.type.startsWith('image/')) {
+            alert("이미지 파일만 업로드할 수 있습니다!");
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(event) {
             uploadedImageSrc = event.target.result;
-            statusText.innerText = "사진 로드 완료! '퍼즐 시작'을 누르세요.";
+            statusText.innerText = "이미지 로드 완료! '퍼즐 시작'을 누르세요.";
         };
         reader.readAsDataURL(file);
     });
 
     function startPuzzle() {
         if (!uploadedImageSrc) {
-            alert("먼저 사진을 업로드해주세요!");
+            alert("먼저 이미지를 업로드해주세요!");
             return;
         }
 
-        getAudioContext(); // 오디오 컨텍스트 활성화
+        getAudioContext();
         completeView.style.display = "none";
         container.style.display = "grid";
         
@@ -168,7 +198,7 @@
         } while (isCompleted());
 
         renderBoard();
-        statusText.innerText = "조각을 꾸욱 누른 채 다른 위치로 드래그하여 교환하세요.";
+        statusText.innerText = "조각을 드래그하여 실시간으로 위치를 교환하세요.";
     }
 
     function renderBoard() {
@@ -182,22 +212,33 @@
             div.style.height = `${currentPieceSize}px`;
             div.dataset.index = index;
 
-            addTouchAndDragEvents(div, index);
+            addTouchAndDragEvents(div, index, piece);
             container.appendChild(div);
         });
     }
 
-    function addTouchAndDragEvents(element, index) {
+    function addTouchAndDragEvents(element, index, piece) {
         let targetElement = null;
 
         element.addEventListener('touchstart', (e) => {
             draggedIndex = index;
             element.classList.add('dragging');
+
+            dragGhost.style.width = `${currentPieceSize}px`;
+            dragGhost.style.height = `${currentPieceSize}px`;
+            dragGhost.style.backgroundImage = `url(${uploadedImageSrc})`;
+            dragGhost.style.backgroundPosition = `-${piece.bgX}px -${piece.bgY}px`;
+            
+            let touch = e.touches[0];
+            updateGhostPosition(touch.clientX, touch.clientY);
+            dragGhost.style.display = 'block';
         }, { passive: true });
 
         element.addEventListener('touchmove', (e) => {
             e.preventDefault();
             let touch = e.touches[0];
+            updateGhostPosition(touch.clientX, touch.clientY);
+
             let elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
 
             document.querySelectorAll('.puzzle-piece').forEach(el => el.classList.remove('drag-over'));
@@ -212,6 +253,7 @@
 
         element.addEventListener('touchend', (e) => {
             element.classList.remove('dragging');
+            dragGhost.style.display = 'none';
             document.querySelectorAll('.puzzle-piece').forEach(el => el.classList.remove('drag-over'));
 
             if (targetElement && targetElement.dataset.index !== undefined) {
@@ -221,22 +263,39 @@
                     pieces[draggedIndex] = pieces[dropIndex];
                     pieces[dropIndex] = temp;
 
-                    playMoveSound(); // 조각 교환 효과음 재생
+                    playMoveSound();
                     renderBoard();
 
                     if (isCompleted()) {
-                        playWinSound(); // 완성 승리 효과음 재생
-                        statusText.innerText = "🎉 축하합니다! 퍼즐을 완성했습니다.";
+                        playWinSound();
+                        statusText.innerText = "🎉 퍼즐 완성! 원본 노출 중...";
                         container.style.display = "none";
-                        document.getElementById('originalImagePreview').src = uploadedImageSrc;
+                        
+                        // 1단계: 원본 이미지 4초간 표시
+                        standardTitle.style.display = "block";
+                        rewardTitle.style.display = "none";
+                        previewImg.src = uploadedImageSrc;
                         completeView.style.display = "block";
-                        alert("🎉 축하합니다! 퍼즐을 완성했습니다!");
                         completeView.scrollIntoView({ behavior: 'smooth' });
+
+                        // 2단계: 4초 후 무작위 보상 이미지로 전환
+                        setTimeout(() => {
+                            let randomReward = rewardImages[Math.floor(Math.random() * rewardImages.length)];
+                            standardTitle.style.display = "none";
+                            rewardTitle.style.display = "block";
+                            previewImg.src = randomReward;
+                            statusText.innerText = "🎉 퍼즐 완성 및 히든 보상 획득!";
+                        }, 4000);
                     }
                 }
             }
             draggedIndex = null;
         });
+    }
+
+    function updateGhostPosition(x, y) {
+        dragGhost.style.left = (x - currentPieceSize / 2) + 'px';
+        dragGhost.style.top = (y - currentPieceSize / 2) + 'px';
     }
 
     function isCompleted() {

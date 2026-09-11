@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>모바일 퍼즐 게임 - 멀티미디어 리워드 에디션</title>
+    <title>모바일 퍼즐 게임 - 안내 가이드 에디션</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; user-select: none; -webkit-user-select: none; }
         h2 { color: #333; }
@@ -51,7 +51,7 @@
 </head>
 <body>
 
-    <h2>그림 맞추기 퍼즐 (멀티미디어 리워드 에디션)</h2>
+    <h2>그림 맞추기 퍼즐 (안내 가이드 에디션)</h2>
     
     <div class="controls">
         <select id="stageSelect">
@@ -64,7 +64,7 @@
             <option value="4">4 x 4</option>
             <option value="5">5 x 5</option>
         </select>
-        <button type="button" onclick="startPuzzle()">게임 시작</button>
+        <button type="button" id="startBtn" onclick="preparePuzzle()">게임 시작</button>
     </div>
 
     <p id="status">스테이지와 난이도를 선택하고 게임 시작을 누르세요.</p>
@@ -78,7 +78,7 @@
         
         <div id="media-slot"></div>
 
-        <br><button type="button" id="nextStageBtn" onclick="nextStage()" style="margin-top:15px; display:none;">다음 스테이지로</button>
+        <br><button type="button" id="nextStageBtn" onclick="prepareNextStage()" style="margin-top:15px; display:none;">다음 스테이지로</button>
     </div>
 
 <script>
@@ -90,6 +90,7 @@
     let currentSize = 3;
     let currentPieceSize = 106.66;
     let currentStageNum = 1;
+    let isPlaying = false;
 
     const container = document.getElementById('puzzle-container');
     const statusText = document.getElementById('status');
@@ -99,8 +100,8 @@
     const rewardTitle = document.getElementById('reward-title');
     const mediaSlot = document.getElementById('media-slot');
     const nextStageBtn = document.getElementById('nextStageBtn');
+    const startBtn = document.getElementById('startBtn');
 
-    // 게임 이미지 탐색 (모든 이미지 포맷 대응)
     function loadGameImage(baseName, callback) {
         const extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'];
         let idx = 0;
@@ -108,6 +109,7 @@
         function tryNext() {
             if (idx >= extensions.length) {
                 alert(`게임 이미지를 찾을 수 없습니다: ${baseName}`);
+                startBtn.disabled = false;
                 return;
             }
             let ext = extensions[idx++];
@@ -120,9 +122,7 @@
         tryNext();
     }
 
-    // 보상 미디어 탐색 (이미지 포맷 + 동영상 포맷 mp4, webm 등 모두 지원)
     function loadRewardMedia(baseName, callback) {
-        // 비디오 포맷 우선 검사 후 이미지 포맷 검사
         const formats = [
             { ext: 'mp4', type: 'video' },
             { ext: 'webm', type: 'video' },
@@ -139,6 +139,7 @@
         function tryNext() {
             if (idx >= formats.length) {
                 alert(`보상 미디어를 찾을 수 없습니다: ${baseName}`);
+                startBtn.disabled = false;
                 return;
             }
             let item = formats[idx++];
@@ -209,13 +210,14 @@
         } catch(e) {}
     }
 
-    function startPuzzle() {
+    function preparePuzzle() {
         currentStageNum = parseInt(document.getElementById('stageSelect').value);
         currentSize = parseInt(document.getElementById('gridSize').value);
         
-        statusText.innerText = `스테이지 ${currentStageNum} 리소스 로딩 중...`;
+        startBtn.disabled = true;
+        statusText.innerText = `스테이지 ${currentStageNum} 리소스를 불러오는 중입니다...`;
         completeView.style.display = "none";
-        container.style.display = "grid";
+        container.style.display = "none";
 
         let gameBase = `game${currentStageNum}`;
         let rewardBase = `reward${currentStageNum}`;
@@ -227,13 +229,29 @@
                 rewardPathData = rewardPath;
                 rewardIsVideo = isVideo;
                 
-                initBoardSettings();
+                // 안내 텍스트 적용: 3초 뒤 자동 시작 카운트다운
+                let countdown = 3;
+                statusText.innerText = `스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다.`;
+                
+                let timer = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        statusText.innerText = `스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다.`;
+                    } else {
+                        clearInterval(timer);
+                        startBtn.disabled = false;
+                        startPuzzle();
+                    }
+                }, 1000);
             });
         });
     }
 
-    function initBoardSettings() {
+    function startPuzzle() {
         getAudioContext();
+        container.style.display = "grid";
+        isPlaying = true;
+        
         container.style.gridTemplateColumns = `repeat(${currentSize}, 1fr)`;
         container.style.gridTemplateRows = `repeat(${currentSize}, 1fr)`;
 
@@ -255,7 +273,7 @@
         } while (isCompleted());
 
         renderBoard();
-        statusText.innerText = `스테이지 ${currentStageNum} 진행 중 - 조각을 드래그하세요.`;
+        statusText.innerText = `스테이지 ${currentStageNum} 진행 중 - 조각을 드래그하여 맞추세요.`;
     }
 
     function renderBoard() {
@@ -278,6 +296,7 @@
         let targetElement = null;
 
         element.addEventListener('touchstart', (e) => {
+            if (!isPlaying) return;
             draggedIndex = index;
             element.classList.add('dragging');
 
@@ -292,6 +311,7 @@
         }, { passive: true });
 
         element.addEventListener('touchmove', (e) => {
+            if (!isPlaying) return;
             e.preventDefault();
             let touch = e.touches[0];
             updateGhostPosition(touch.clientX, touch.clientY);
@@ -309,6 +329,7 @@
         }, { passive: false });
 
         element.addEventListener('touchend', (e) => {
+            if (!isPlaying) return;
             element.classList.remove('dragging');
             dragGhost.style.display = 'none';
             document.querySelectorAll('.puzzle-piece').forEach(el => el.classList.remove('drag-over'));
@@ -324,8 +345,11 @@
                     renderBoard();
 
                     if (isCompleted()) {
+                        isPlaying = false;
                         playWinSound();
-                        statusText.innerText = `🎉 스테이지 ${currentStageNum} 완성! 원본 노출 중...`;
+                        
+                        // 안내 텍스트 적용: 클리어 축하 및 보상 대기 안내
+                        statusText.innerText = `스테이지 ${currentStageNum} 클리어 축하합니다! 4초 후 숨겨진 보상이 디스플레이 됩니다. 기다려봐요.`;
                         container.style.display = "none";
                         
                         // 1단계: 원본 게임 이미지 4초간 표시
@@ -336,7 +360,7 @@
                         completeView.style.display = "block";
                         completeView.scrollIntoView({ behavior: 'smooth' });
 
-                        // 2단계: 4초 후 보상 미디어(이미지, GIF 또는 동영상)로 전환
+                        // 2단계: 4초 후 보상 미디어로 전환
                         setTimeout(() => {
                             standardTitle.style.display = "none";
                             rewardTitle.style.display = "block";
@@ -347,7 +371,7 @@
                                 mediaSlot.innerHTML = `<img src="${rewardPathData}" alt="보상 미디어">`;
                             }
 
-                            statusText.innerText = `🎉 스테이지 ${currentStageNum} 클리어 및 히든 보상 획득!`;
+                            statusText.innerText = `🎉 스테이지 ${currentStageNum} 히든 보상 획득 완료!`;
                             if (currentStageNum < 3) {
                                 nextStageBtn.style.display = "inline-block";
                             }
@@ -368,11 +392,36 @@
         return pieces.every((p, i) => p.correctIndex === i);
     }
 
-    function nextStage() {
+    function prepareNextStage() {
         if (currentStageNum < 3) {
             currentStageNum++;
             document.getElementById('stageSelect').value = currentStageNum;
-            startPuzzle();
+            
+            // 안내 텍스트 적용: 다음 스테이지 자동 시작 안내
+            let countdown = 3;
+            completeView.style.display = "none";
+            statusText.innerText = `스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다.`;
+            
+            let gameBase = `game${currentStageNum}`;
+            let rewardBase = `reward${currentStageNum}`;
+
+            loadGameImage(gameBase, function(gamePath) {
+                currentImageSrc = gamePath;
+                loadRewardMedia(rewardBase, function(rewardPath, isVideo) {
+                    rewardPathData = rewardPath;
+                    rewardIsVideo = isVideo;
+
+                    let timer = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            statusText.innerText = `스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다.`;
+                        } else {
+                            clearInterval(timer);
+                            startPuzzle();
+                        }
+                    }, 1000);
+                });
+            });
         }
     }
 </script>

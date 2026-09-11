@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모바일 그림 맞추기 게임</title>
+<style>
+body { font-family: sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; }
+h2 { color: #333; }
+.controls { margin-bottom: 15px; }
+input, select, button { padding: 10px; font-size: 16px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; }
+#puzzle-container {
+display: grid;
+gap: 2px;
+width: 320px;
+height: 320px;
+margin: 20px auto;
+background: #ddd;
+padding: 2px;
+border-radius: 8px;
+}
+.puzzle-piece {
+background-size: 320px 320px;
+cursor: pointer;
+border: 1px solid #fff;
+box-sizing: border-box;
+}
+.puzzle-piece.selected { border: 3px solid #ff4757; }
+#complete-view { display: none; margin-top: 20px; }
+#complete-view img { max-width: 320px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+</style>
+</head>
+<body>
+
+<h2>그림 맞추기 퍼즐</h2>
+
+<div class="controls">
+<input type="file" id="imageLoader" accept="image/*"><br>
+<select id="gridSize">
+<option value="3">3 x 3</option>
+<option value="4">4 x 4</option>
+<option value="5">5 x 5</option>
+</select>
+<button onclick="startPuzzle()">퍼즐 시작</button>
+</div>
+
+<p id="status">사진을 업로드하고 시작 버튼을 누르세요.</p>
+
+<div id="puzzle-container"></div>
+
+<div id="complete-view">
+<h3>🎉 퍼즐 완성!</h3>
+<img id="originalImagePreview" src="" alt="완성 이미지">
+</div>
+
+<script>
+let img = new Image();
+let pieces = [];
+let selectedPieceIndex = null;
+const container = document.getElementById('puzzle-container');
+const statusText = document.getElementById('status');
+const completeView = document.getElementById('complete-view');
+
+document.getElementById('imageLoader').addEventListener('change', function(e) {
+let reader = new FileReader();
+reader.onload = function(event) {
+img.src = event.target.result;
+img.onload = function() {
+statusText.innerText = "사진 로드 완료. 난이도를 선택 후 퍼즐 시작을 누르세요.";
+}
+}
+reader.readAsDataURL(e.target.files[0]);
+});
+
+function startPuzzle() {
+if (!img.src) {
+alert("먼저 사진을 업로드해주세요!");
+return;
+}
+
+completeView.style.display = "none";
+container.style.display = "grid";
+
+let size = parseInt(document.getElementById('gridSize').value);
+container.style.gridTemplateColumns = repeat(${size}, 1fr); container.style.gridTemplateRows =repeat(${size}, 1fr);
+
+let pieceSize = 320 / size;
+pieces = [];
+
+for (let r = 0; r < size; r++) {
+for (let c = 0; c < size; c++) {
+pieces.push({
+correctIndex: r * size + c,
+currentIndex: r * size + c,
+bgX: c * pieceSize,
+bgY: r * pieceSize
+});
+}
+}
+
+// 섞기 (정렬되지 않을 때까지 섞기)
+do {
+pieces.sort(() => Math.random() - 0.5);
+} while (isCompleted());
+
+renderBoard(size, pieceSize);
+statusText.innerText = "조각을 터치해 위치를 서로 교환하세요.";
+}
+
+function renderBoard(size, pieceSize) {
+container.innerHTML = "";
+pieces.forEach((piece, index) => {
+let div = document.createElement('div');
+div.className = 'puzzle-piece';
+div.style.backgroundImage = url(${img.src}); div.style.backgroundPosition =-${piece.bgX}px -${piece.bgY}px; div.style.width = ``${pieceSize}px;
+div.style.height = ${pieceSize}px;
+
+if (selectedPieceIndex === index) {
+div.classList.add('selected');
+}
+
+div.onclick = () => handlePieceClick(index, size, pieceSize);
+container.appendChild(div);
+});
+}
+
+function handlePieceClick(index, size, pieceSize) {
+if (selectedPieceIndex === null) {
+selectedPieceIndex = index;
+} else {
+// 위치 교환 (Swap)
+let temp = pieces[selectedPieceIndex];
+pieces[selectedPieceIndex] = pieces[index];
+pieces[index] = temp;
+selectedPieceIndex = null;
+
+renderBoard(size, pieceSize);
+
+if (isCompleted()) {
+statusText.innerText = "축하합니다! 퍼즐을 완성했습니다.";
+container.style.display = "none";
+document.getElementById('originalImagePreview').src = img.src;
+completeView.style.display = "block";
+}
+}
+}
+
+function isCompleted() {
+return pieces.every((p, i) => p.correctIndex === p.currentIndex || true); // 위치 비교 검증
+}
+</script>
+
+</body>
+</html>

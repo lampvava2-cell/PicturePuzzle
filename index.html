@@ -3,23 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>모바일 퍼즐 게임 - 안내 가이드 에디션</title>
+    <title>모바일 퍼즐 게임 - 네온 가이드 리워드 에디션</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; user-select: none; -webkit-user-select: none; }
-        h2 { color: #333; }
-        .controls { margin-bottom: 15px; }
-        select, button { padding: 10px; font-size: 16px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; }
-        button { background-color: #007bff; color: white; border: none; font-weight: bold; cursor: pointer; }
-        button:active { background-color: #0056b3; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+            margin: 0; 
+            padding: 20px; 
+            user-select: none; 
+            -webkit-user-select: none; 
+            min-height: 100vh;
+        }
+        h2 { color: #2c3e50; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); margin-bottom: 10px; }
+        
+        .controls { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
+            display: inline-block; 
+            margin-bottom: 15px; 
+        }
+        select, button { 
+            padding: 10px 15px; 
+            font-size: 16px; 
+            margin: 5px; 
+            border-radius: 8px; 
+            border: 1px solid #ddd; 
+            outline: none;
+        }
+        button { 
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); 
+            color: white; 
+            border: none; 
+            font-weight: bold; 
+            cursor: pointer; 
+            box-shadow: 0 4px 10px rgba(37, 117, 252, 0.3);
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.96); }
+
+        /* 안내 멘트 하이라이트 박스 */
+        .status-card {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            border: 2px solid #ff6b81;
+            padding: 12px 20px;
+            border-radius: 12px;
+            max-width: 340px;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 4px 15px rgba(255, 107, 129, 0.3);
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 129, 0); }
+        }
+        #status {
+            color: #d63031;
+            font-weight: bold;
+            font-size: 15px;
+            margin: 0;
+            line-height: 1.4;
+        }
+
         #puzzle-container {
             display: grid;
             gap: 2px;
             width: 320px;
             height: 320px;
-            margin: 20px auto;
-            background: #ddd;
-            padding: 2px;
-            border-radius: 8px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 4px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
             position: relative;
         }
         .puzzle-piece {
@@ -28,6 +86,7 @@
             border: 1px solid #fff;
             box-sizing: border-box;
             touch-action: none;
+            border-radius: 4px;
         }
         .puzzle-piece.dragging { opacity: 0.3; }
         .puzzle-piece.drag-over { border: 3px solid #2ed573; background-color: rgba(46, 213, 115, 0.3); }
@@ -42,43 +101,43 @@
             border: 2px solid #ff4757;
             box-sizing: border-box;
             background-size: 320px 320px;
+            border-radius: 4px;
         }
 
-        #complete-view { display: none; margin-top: 20px; }
+        #complete-view { display: none; margin-top: 20px; background: white; padding: 20px; border-radius: 12px; display: inline-block; box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
         #complete-view img, #complete-view video { max-width: 320px; width: 100%; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: block; margin: 0 auto; }
         #reward-title { color: #ff4757; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
 
-    <h2>그림 맞추기 퍼즐 (안내 가이드 에디션)</h2>
+    <h2>🧩 네온 퍼즐 어드벤처</h2>
     
     <div class="controls">
-        <select id="stageSelect">
-            <option value="1">스테이지 1</option>
-            <option value="2">스테이지 2</option>
-            <option value="3">스테이지 3</option>
-        </select>
+        <!-- 스테이지 선택 기능 제거 (순차 진행) -->
         <select id="gridSize">
-            <option value="3">3 x 3</option>
-            <option value="4">4 x 4</option>
-            <option value="5">5 x 5</option>
+            <option value="3">3 x 3 (쉬움)</option>
+            <option value="4">4 x 4 (보통)</option>
+            <option value="5">5 x 5 (어려움)</option>
         </select>
-        <button type="button" id="startBtn" onclick="preparePuzzle()">게임 시작</button>
+        <button type="button" id="startBtn" onclick="startFirstStage()">게임 시작</button>
     </div>
 
-    <p id="status">스테이지와 난이도를 선택하고 게임 시작을 누르세요.</p>
+    <!-- 눈에 띄는 하이라이트 안내 멘트 박스 -->
+    <div class="status-card">
+        <p id="status">✨ 난이도를 고르고 '게임 시작' 버튼을 누르세요!</p>
+    </div>
 
-    <div id="puzzle-container"></div>
+    <div id="puzzle-container" style="display:none;"></div>
     <div id="drag-ghost"></div>
 
-    <div id="complete-view">
+    <div id="complete-view" style="display:none;">
         <h3 id="standard-title">🎉 퍼즐 완성! 원본 이미지</h3>
         <h3 id="reward-title">🎁 히든 멀티미디어 보상 등장!</h3>
         
         <div id="media-slot"></div>
 
-        <br><button type="button" id="nextStageBtn" onclick="prepareNextStage()" style="margin-top:15px; display:none;">다음 스테이지로</button>
+        <br><button type="button" id="nextStageBtn" onclick="prepareNextStage()" style="margin-top:15px; display:none;">다음 스테이지로 이동</button>
     </div>
 
 <script>
@@ -210,8 +269,12 @@
         } catch(e) {}
     }
 
+    function startFirstStage() {
+        currentStageNum = 1;
+        preparePuzzle();
+    }
+
     function preparePuzzle() {
-        currentStageNum = parseInt(document.getElementById('stageSelect').value);
         currentSize = parseInt(document.getElementById('gridSize').value);
         
         startBtn.disabled = true;
@@ -229,14 +292,13 @@
                 rewardPathData = rewardPath;
                 rewardIsVideo = isVideo;
                 
-                // 안내 텍스트 적용: 3초 뒤 자동 시작 카운트다운
                 let countdown = 3;
-                statusText.innerText = `스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다.`;
+                statusText.innerText = `🔥 스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다!`;
                 
                 let timer = setInterval(() => {
                     countdown--;
                     if (countdown > 0) {
-                        statusText.innerText = `스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다.`;
+                        statusText.innerText = `🔥 스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다!`;
                     } else {
                         clearInterval(timer);
                         startBtn.disabled = false;
@@ -273,7 +335,7 @@
         } while (isCompleted());
 
         renderBoard();
-        statusText.innerText = `스테이지 ${currentStageNum} 진행 중 - 조각을 드래그하여 맞추세요.`;
+        statusText.innerText = `⭐ 스테이지 ${currentStageNum} 진행 중 - 조각을 드래그해 맞추세요! ⭐`;
     }
 
     function renderBoard() {
@@ -348,11 +410,9 @@
                         isPlaying = false;
                         playWinSound();
                         
-                        // 안내 텍스트 적용: 클리어 축하 및 보상 대기 안내
-                        statusText.innerText = `스테이지 ${currentStageNum} 클리어 축하합니다! 4초 후 숨겨진 보상이 디스플레이 됩니다. 기다려봐요.`;
+                        statusText.innerText = `🎉 스테이지 ${currentStageNum} 클리어 축하합니다! 3초 후 숨겨진 보상이 디스플레이 됩니다. 기다려봐요.`;
                         container.style.display = "none";
                         
-                        // 1단계: 원본 게임 이미지 4초간 표시
                         standardTitle.style.display = "block";
                         rewardTitle.style.display = "none";
                         mediaSlot.innerHTML = `<img src="${currentImageSrc}" alt="원본 이미지">`;
@@ -360,7 +420,6 @@
                         completeView.style.display = "block";
                         completeView.scrollIntoView({ behavior: 'smooth' });
 
-                        // 2단계: 4초 후 보상 미디어로 전환
                         setTimeout(() => {
                             standardTitle.style.display = "none";
                             rewardTitle.style.display = "block";
@@ -371,11 +430,13 @@
                                 mediaSlot.innerHTML = `<img src="${rewardPathData}" alt="보상 미디어">`;
                             }
 
-                            statusText.innerText = `🎉 스테이지 ${currentStageNum} 히든 보상 획득 완료!`;
+                            statusText.innerText = `🎁 스테이지 ${currentStageNum} 히든 보상 획득 완료!`;
                             if (currentStageNum < 3) {
                                 nextStageBtn.style.display = "inline-block";
+                            } else {
+                                statusText.innerText = `🏆 모든 스테이지(1~3)를 클리어했습니다! 축하합니다! 🏆`;
                             }
-                        }, 4000);
+                        }, 3000);
                     }
                 }
             }
@@ -395,9 +456,7 @@
     function prepareNextStage() {
         if (currentStageNum < 3) {
             currentStageNum++;
-            document.getElementById('stageSelect').value = currentStageNum;
             
-            // 안내 텍스트 적용: 다음 스테이지 자동 시작 안내
             let countdown = 3;
             completeView.style.display = "none";
             statusText.innerText = `스테이지 ${currentStageNum} 게임이 ${countdown}초 뒤 자동 시작합니다.`;
